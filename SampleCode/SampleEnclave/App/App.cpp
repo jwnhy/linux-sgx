@@ -39,6 +39,7 @@
 # define MAX_PATH FILENAME_MAX
 
 #include "sgx_urts.h"
+#include "sgx_enclave_info.h"
 #include "App.h"
 #include "Enclave_u.h"
 
@@ -195,18 +196,11 @@ int SGX_CDECL main(int argc, char *argv[])
         getchar();
         return -1; 
     }
- 
-    /* Utilize edger8r attributes */
-    edger8r_array_attributes();
-    edger8r_pointer_attributes();
-    edger8r_type_attributes();
-    edger8r_function_attributes();
-    
-    /* Utilize trusted libraries */
-    ecall_libc_functions();
-    ecall_libcxx_functions();
-    ecall_thread_functions();
-
+    sgx_enclave_info_t einfo; 
+    sgx_get_enclave_info(global_eid, &einfo);
+    printf("Enclave ID: %lx\n", einfo.id);
+    printf("Enclave Base Address: 0x%lx\n", einfo.start_addr);
+    printf("Enclave Size: %lu\n", einfo.size);
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
     

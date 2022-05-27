@@ -4,6 +4,7 @@ Intel(R) Software Guard Extensions for Linux\* OS
 ================================================
 
 # linux-sgx
+* [Enclave Sharing Project](#sharing)
 * [Introduction](#introduction)
 * [License](#license)
 * [Contributing](#contributing)
@@ -31,6 +32,11 @@ Intel(R) Software Guard Extensions for Linux\* OS
     * [Configure the Proxy for aesmd Service](#configure-the-proxy-for-aesmd-service)
 * [Reproducibility](#reproducibility)
 
+Sharing
+------------
+- Please INSTALL your SDK under `~/linux-sgx/sgxsdk`, a.k.a `<whereever-linux-sgx-is>/sgxsdk`.
+- If you need to MODIFY sdk, change HEADERS in `linux-sgx/common/inc`, change URTS in `linux-sgx/psw/urts/`.
+  Then run `linux-sgx/sync.sh`, this will SYNC your change into `linux-sgx/sgxsdk` and `/lib/libsgx*.so`.
 
 Introduction
 ------------

@@ -33,12 +33,26 @@
 #include "sgx_error.h"
 #include "sgx_urts.h"
 #include "sgx_uswitchless.h"
+#include "sgx_enclave.h"
 #include "se_types.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 
 #include "urts_com.h"
+
+extern "C" sgx_status_t sgx_get_enclave_info(
+    const sgx_enclave_id_t enclave_id,
+    sgx_enclave_info_t* enclave_info) {
+  CEnclave* enclave = CEnclavePool::instance()->get_enclave(enclave_id);
+  if (!enclave) {
+    return SGX_ERROR_INVALID_ENCLAVE_ID;
+  }
+  enclave_info->id = enclave_id;
+  enclave_info->size = enclave->get_size();
+  enclave_info->start_addr = (uint64_t)enclave->get_start_address();
+  return SGX_SUCCESS;
+}
 
 static bool inline _check_ex_params_(const uint32_t ex_features, const void* ex_features_p[32])
 {
@@ -148,6 +162,7 @@ extern "C" sgx_status_t sgx_get_target_info(
     *target_info = enclave->get_target_info();
     return SGX_SUCCESS;
 }
+
 
 
 extern "C" sgx_status_t sgx_create_enclave_from_buffer_ex(uint8_t *buffer,
