@@ -171,7 +171,7 @@ int SGX_CDECL main(int argc, char *argv[])
     printf("Enclave Base Address: 0x%lx\n", einfo.start_addr);
     printf("Enclave Size: %lu\n", einfo.size);
 
-    translate_self_virt((uint64_t)einfo.start_addr, 4096);
+    translate_self_virt((uint64_t)einfo.start_addr, einfo.size);
     printf("PID: %d\n", getpid());
     /* Destroy the enclave */
     

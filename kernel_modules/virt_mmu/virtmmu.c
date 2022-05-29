@@ -55,14 +55,13 @@ static ssize_t virtmmu_read(struct file *file, char __user *userbuffer,
   struct mm_struct *mm;
   pagebuffer = (uint64_t *)userbuffer;
 
-  printk("Size: %llx\n", size);
+  printk("Size: %lx\n", size);
 
   mm = current->mm;
   virtaddr = *ptoff * PAGESIZE / PTESIZE;
   pagebuffer = (uint64_t *)userbuffer;
   pagecnt = size / PTESIZE;
   for (i = 0; i < pagecnt; i++) {
-    printk("Translateing %llx\n", virtaddr);
     if (follow_pte(mm, virtaddr, &ptep, &ptl)) {
       put_user(0x0, &pagebuffer[i]);
     } else {
