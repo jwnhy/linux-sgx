@@ -6,6 +6,8 @@
 #include <linux/module.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/mm.h>
+#include <linux/hugetlb.h>
 
 struct virtmmu_device {
   struct cdev cdev;
