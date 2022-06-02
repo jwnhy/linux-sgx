@@ -16,4 +16,5 @@ struct virtmmu_device {
 static int virtmmu_open(struct inode* _inode, struct file* _file);
 
 static ssize_t virtmmu_read(struct file *file, char __user *user_buffer, size_t size, loff_t *offset);
+static ssize_t virtmmu_write(struct file *file, const char __user *userbuffer, size_t size, loff_t *offset);
 #endif

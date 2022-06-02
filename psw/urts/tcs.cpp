@@ -235,6 +235,28 @@ CTrustThread * CTrustThreadPool::add_thread(tcs_t * const tcs, CEnclave * const 
     return trust_thread;
 }
 
+tcs_t * CTrustThreadPool::remove_thread() {
+  if (m_free_thread_vector.empty()) {
+    return NULL;
+  }
+  m_free_thread_mutex.lock();
+
+  CTrustThread *free_thread = m_free_thread_vector.back();
+  m_free_thread_vector.pop_back();
+  tcs_t *free_tcs = free_thread->get_tcs();
+
+  m_free_thread_mutex.unlock();
+  delete free_thread;
+  
+  return free_tcs;
+}
+
+size_t CTrustThreadPool::free_tcs_size() {
+  m_free_thread_mutex.lock();
+  return m_free_thread_vector.size();
+  m_free_thread_mutex.unlock();
+}
+
 CTrustThread *CTrustThreadPool::get_bound_thread(const tcs_t *tcs)
 {
     //Since now this function will be call outside, we need get lock to protect map

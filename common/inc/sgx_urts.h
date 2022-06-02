@@ -86,6 +86,7 @@ typedef uint8_t sgx_launch_token_t[1024];
 #else
 #define SGX_DEBUG_FLAG 0
 #endif
+sgx_status_t SGXAPI sgx_register_enclave(sgx_enclave_info_t *einfopt);
 sgx_status_t SGXAPI sgx_get_enclave_info(const sgx_enclave_id_t enclave_id,
                                          sgx_enclave_info_t *enclave_info);
 

@@ -19,6 +19,7 @@
         sgx_set_switchless_itf;
         sgx_get_metadata;
         sgx_get_enclave_info;
+        sgx_register_enclave;
     local:
         *;
 };

@@ -32,6 +32,7 @@
 #ifndef _SGX_ENCLAVE_COMMON_H_
 #define _SGX_ENCLAVE_COMMON_H_
 
+#include <map>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -39,6 +40,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
 
 /* The following macros are for GCC only */
 #define COMM_API
@@ -122,6 +125,7 @@ typedef struct enclave_init_sgx_t {
     uint8_t sigstruct[SIGSTRUCT_SIZE];
 } enclave_init_sgx_t;
 
+int COMM_API enclave_get_device_fd(COMM_IN void* base_address);
 
 /* enclave_create_ex()
  * Parameters:

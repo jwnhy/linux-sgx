@@ -83,6 +83,10 @@ typedef struct _mem_region_t {
     int prot;
 } mem_region_t;
 
+extern "C" int enclave_get_device_fd(void* base_address) {
+  return s_hfile[base_address];
+}
+
 static std::map<void*, mem_region_t> s_enclave_mem_region;
 
 static bool open_file(int *hFile)

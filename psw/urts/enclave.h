@@ -84,6 +84,10 @@ public:
     sgx_status_t init_uswitchless(const void* config);
     void destroy_uswitchless(void);
     sgx_target_info_t get_target_info();
+
+    static CEnclave* from_einfo(sgx_enclave_info_t *einfo);
+    void to_einfo(sgx_enclave_info_t* einfopt);
+    
 #ifdef SE_SIM
     void *get_global_data_sim_ptr();
 #endif 

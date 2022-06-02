@@ -76,6 +76,8 @@ public:
     CTrustThread * acquire_free_thread();
     CTrustThread * acquire_thread(int ecall_cmd);
     CTrustThread *add_thread(tcs_t * const tcs, CEnclave * const enclave, bool is_unallocated);
+    tcs_t *remove_thread();
+    size_t free_tcs_size();
     CTrustThread *get_bound_thread(const tcs_t *tcs);
     std::vector<CTrustThread *> get_thread_list();
     void reset();

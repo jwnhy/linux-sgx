@@ -13,6 +13,7 @@ const struct file_operations virtmmu_ops = {
     .owner = THIS_MODULE,
     .open = virtmmu_open,
     .read = virtmmu_read,
+    .write = virtmmu_write,
 };
 
 struct virtmmu_device virtmmu_dev;
@@ -48,14 +49,12 @@ static int virtmmu_open(struct inode *_inode, struct file *_file) {
 
 static ssize_t virtmmu_read(struct file *file, char __user *userbuffer,
                             size_t size, loff_t *ptoff) {
-  uint64_t *pagebuffer, virtaddr, physaddr;
+  uint64_t *pagebuffer, virtaddr;
   size_t pagecnt, i;
   spinlock_t *ptl;
   pte_t *ptep, pte;
   struct mm_struct *mm;
   pagebuffer = (uint64_t *)userbuffer;
-
-  printk("Size: %lx\n", size);
 
   mm = current->mm;
   virtaddr = *ptoff * PAGESIZE / PTESIZE;
@@ -66,9 +65,37 @@ static ssize_t virtmmu_read(struct file *file, char __user *userbuffer,
       put_user(0x0, &pagebuffer[i]);
     } else {
       pte = *ptep;
-      physaddr = pte_pfn(pte) << PAGE_SHIFT;
-      put_user(physaddr, &pagebuffer[i]);
+      put_user(pte.pte, &pagebuffer[i]);
       pte_unmap_unlock(ptep, ptl);
+    }
+    virtaddr += PAGESIZE;
+  }
+  return pagecnt * sizeof(uint64_t);
+}
+
+static ssize_t virtmmu_write(struct file *file, const char __user *userbuffer,
+                             size_t size, loff_t *ptoff) {
+  uint64_t *pagebuffer, virtaddr;
+  int ret;
+  size_t pagecnt, i;
+  pte_t pte;
+  struct mm_struct *mm;
+
+  mm = current->mm;
+  virtaddr = *ptoff * PAGESIZE / PTESIZE;
+  pagebuffer = (uint64_t *)userbuffer;
+  pagecnt = size / PTESIZE;
+
+  for (i = 0; i < pagecnt; i++) {
+    get_user(pte.pte, &pagebuffer[i]);
+    if (pte.pte == 0x0) {
+      continue;
+    } else {
+      printk("Remapping: %llx -> %lx @ %lx", virtaddr, pte_pfn(pte), pte_pgprot(pte).pgprot);
+      ret = vmf_insert_pfn_prot(mm->mmap, virtaddr, pte_pfn(pte), pte_pgprot(pte));
+      if (ret != 0) {
+        printk("FUCKME: %d", ret);
+      }
     }
     virtaddr += PAGESIZE;
   }
