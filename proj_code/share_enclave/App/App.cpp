@@ -9,12 +9,12 @@
 #include "App.h"
 #include "Enclave_u.h"
 #include "TranslateVirtual.h"
-#include "sgx_enclave_info.h"
 #include "sgx_enclave_common.h"
+#include "sgx_enclave_info.h"
 #include "sgx_urts.h"
-#include <sys/shm.h>
-#include <sys/sem.h>
 #include <stdio.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -101,14 +101,20 @@ int SGX_CDECL main(int argc, char *argv[]) {
   (void)(argv);
 
   int pid = -1;
-  int pipefd[2];
-  int pagesize = getpagesize();
+  int pipefd[2], socketfd[2];
   if (pipe(pipefd) < 0) {
-    perror("get pipe error");
+    printf("get pipe error");
     exit(1);
   }
 
-  //pid = fork();
+  if (socketpair(AF_UNIX, SOCK_DGRAM, 0, socketfd) < 0) {
+    printf("get socket error");
+    exit(1);
+  }
+
+  int pagesize = getpagesize();
+  int sgx_fd = -1;
+  pid = fork();
 
   if (pid == 0) {
     // Child Process
@@ -119,38 +125,82 @@ int SGX_CDECL main(int argc, char *argv[]) {
     printf("Enclave Size: %lu\n", einfo.size);
 
     size_t pagebufsize = einfo.size / pagesize * sizeof(uint64_t);
-    uint64_t * pagebuf = (uint64_t *)malloc(pagebufsize);
-    read(pipefd[0], pagebuf, pagebufsize);
-    map_self_virt((uint64_t)einfo.start_addr, einfo.size, pagebuf);
-
-    if(SGX_SUCCESS != sgx_register_enclave(&einfo)) {
-      printf("FUCK");
+    uint64_t *pagebuf = (uint64_t *)malloc(pagebufsize);
+    if (pagebuf == NULL) {
+      printf("[Child] pagebuffer allocation failed");
+      exit(1);
     }
-    ecall_malloc_free(einfo.id);
+
+    if (read(pipefd[0], pagebuf, pagebufsize) != pagebufsize) {
+      printf("[Child] pagebuffer reading failed");
+      exit(1);
+    }
+
+    if ((sgx_fd = recv_fd(socketfd[0])) < 1) {
+      printf("[Child] sgxfd reading failed");
+      exit(1);
+    }
+    printf("[Child] SGX Device FD: %d\n", sgx_fd);
+
+    if (map_self_virt(sgx_fd, (uint64_t)einfo.start_addr, einfo.size, pagebuf) != 0) {
+      printf("[Child] remap enclave vm failed");
+      exit(1);
+    }
+
+    if (SGX_SUCCESS != sgx_register_enclave(&einfo)) {
+      printf("[Child] register enclave failed");
+      exit(1);
+    }
+    if (SGX_SUCCESS != ecall_malloc_free(einfo.id)) {
+      printf("[Child] ecall failed");
+      exit(1);
+    }
   } else {
     // Parent Process
     if (initialize_enclave() < 0) {
-      printf("Enter a character before exit ...\n");
-      getchar();
-      return -1;
+      printf("[Parent] initialize_enclave failed");
+      exit(1);
     }
     sgx_enclave_info_t einfo;
-    sgx_get_enclave_info(global_eid, &einfo);
+    if (SGX_SUCCESS != sgx_get_enclave_info(global_eid, &einfo)) {
+      printf("[Parent] get enclave info failed");
+      exit(1);
+    }
 
-    printf("SGX Device FD: %d\n", enclave_get_device_fd((void*)einfo.start_addr));
+    sgx_fd = enclave_get_device_fd((void *)einfo.start_addr);
+    printf("[Parent] SGX Device FD: %d\n", sgx_fd);
 
-    ecall_malloc_free(einfo.id);
-    write(pipefd[1], &einfo, sizeof(sgx_enclave_info_t));
+    if (send_fd(socketfd[1], sgx_fd) < 0) {
+      printf("[Parent] sgx_fd write failed");
+      exit(1);
+    }
+
+    if (SGX_SUCCESS != ecall_malloc_free(einfo.id)) {
+      printf("[Parent] ecall failed");
+      exit(1);
+    }
+    if (write(pipefd[1], &einfo, sizeof(sgx_enclave_info_t)) !=
+        sizeof(sgx_enclave_info_t)) {
+      printf("[Parent] enclave info write failed");
+      exit(1);
+    }
 
     size_t pagebufsize = einfo.size / pagesize * sizeof(uint64_t);
-    uint64_t * pagebuf = (uint64_t *)malloc(pagebufsize);
-    translate_self_virt((uint64_t)einfo.start_addr, einfo.size, pagebuf);
-    write(pipefd[1], pagebuf, pagebufsize);
+    uint64_t *pagebuf = (uint64_t *)malloc(pagebufsize);
+    if (translate_self_virt((uint64_t)einfo.start_addr, einfo.size, pagebuf) <
+        0) {
+      printf("[Parent] translate virt failed");
+      exit(1);
+    }
+    if (write(pipefd[1], pagebuf, pagebufsize) != pagebufsize) {
+      printf("[Parent] send enclave mapping failed");
+      exit(1);
+    }
+    printf("Enter a character before exit ...\n");
+    getchar();
+
+    sgx_destroy_enclave(global_eid);
   }
 
-  printf("Enter a character before exit ...\n");
-  getchar();
-
-  sgx_destroy_enclave(global_eid);
   return 0;
 }
